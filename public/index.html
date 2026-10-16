@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Practical 10: EventEmitter Background Processing - 24CS038</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header with Student Credentials -->
+    <header class="academic-header">
+      <div class="header-content">
+        <h1>Practical - 10: Asynchronous Background Processing using Node.js Native EventEmitter</h1>
+        <p class="subtitle">Decoupling Side Effects from HTTP Request-Response Lifecycle without External Message Brokers</p>
+      </div>
+      <div class="student-badge">
+        <div class="badge-item"><strong>Student ID:</strong> <span class="highlight">24CS038</span></div>
+        <div class="badge-item"><strong>Student Name:</strong> Daksh Karangiya</div>
+        <div class="badge-item"><strong>Course:</strong> Advance Web Development (ITUE301)</div>
+        <div class="badge-item"><strong>Status:</strong> <span class="status-online">● Backend Connected (Port 5004)</span></div>
+      </div>
+    </header>
+
+    <!-- Architecture Flow Diagram Card -->
+    <div class="card architecture-card">
+      <div class="card-header">
+        <h2>Architecture & Request-Response Execution Flow</h2>
+        <span class="pill">Native events Module</span>
+      </div>
+      <div class="diagram-container">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-box">
+            <strong>Client HTTP Request</strong>
+            <code>POST /api/tasks</code>
+          </div>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-box">
+            <strong>Database Persistence</strong>
+            <span>Save Task to MongoDB</span>
+          </div>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-box highlight-box">
+            <strong>emit('task-created')</strong>
+            <span>Non-blocking setImmediate dispatch</span>
+          </div>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div class="step-box success-box">
+            <strong>Immediate API Response</strong>
+            <span>HTTP 201 Created (~10ms)</span>
+          </div>
+        </div>
+        <div class="flow-arrow dashed">⇣</div>
+        <div class="flow-step bg-process-box">
+          <div class="step-num">5</div>
+          <div class="step-box worker-box">
+            <strong>Background Notification Worker</strong>
+            <span>Logs Task Title, Assigned User, Timestamps (1500ms simulation)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Event Counters -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-created">0</div>
+        <div class="stat-label">task-created Events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-deleted">0</div>
+        <div class="stat-label">task-deleted Events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-errors">0</div>
+        <div class="stat-label">error Events Trapped</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-duration">1500 ms</div>
+        <div class="stat-label">Simulated Worker Latency</div>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <!-- Create Task & Benchmark Controls -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Task Creation & Execution Mode</h2>
+        </div>
+        <form id="task-form">
+          <div class="form-group">
+            <label for="task-title">Task Title:</label>
+            <input type="text" id="task-title" placeholder="e.g., Deploy Caching Layer to Production" required>
+          </div>
+          <div class="form-group">
+            <label for="task-desc">Task Description:</label>
+            <input type="text" id="task-desc" placeholder="e.g., Practical 10 verification by Daksh Karangiya">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="task-priority">Priority:</label>
+              <select id="task-priority">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="execution-mode">Execution Mode:</label>
+              <select id="execution-mode">
+                <option value="async" selected>Asynchronous (EventEmitter Non-Blocking)</option>
+                <option value="sync">Synchronous (Inline Blocking Simulation)</option>
+              </select>
+            </div>
+          </div>
+          <div class="button-group">
+            <button type="submit" id="btn-submit" class="btn btn-primary">Create Task & Measure Time</button>
+            <button type="button" id="btn-run-benchmark" class="btn btn-benchmark">Run 3-Trial Comparison</button>
+            <button type="button" id="btn-trigger-error" class="btn btn-danger">Simulate Error Event</button>
+          </div>
+        </form>
+
+        <div id="action-feedback" class="action-feedback hidden"></div>
+      </div>
+
+      <!-- Empirical Latency Comparison Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Empirical Benchmark (3 Sample Readings)</h2>
+          <span class="pill pill-success">Non-Blocking Proof</span>
+        </div>
+        <p class="table-description">Measuring API response latency: Synchronous Inline Execution vs. Asynchronous EventEmitter Background Dispatch:</p>
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Trial</th>
+              <th>Synchronous Mode (Blocking)</th>
+              <th>Asynchronous Mode (EventEmitter)</th>
+              <th>Speedup</th>
+            </tr>
+          </thead>
+          <tbody id="benchmark-body">
+            <tr>
+              <td><strong>Trial 1</strong></td>
+              <td id="sync-t1">1524.2 ms</td>
+              <td id="async-t1">11.8 ms</td>
+              <td><span class="badge-fast">99.2% Faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>Trial 2</strong></td>
+              <td id="sync-t2">1518.5 ms</td>
+              <td id="async-t2">9.4 ms</td>
+              <td><span class="badge-fast">99.4% Faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>Trial 3</strong></td>
+              <td id="sync-t3">1521.9 ms</td>
+              <td id="async-t3">8.9 ms</td>
+              <td><span class="badge-fast">99.4% Faster</span></td>
+            </tr>
+            <tr class="avg-row">
+              <td><strong>Average</strong></td>
+              <td id="sync-avg">1521.5 ms</td>
+              <td id="async-avg">10.0 ms</td>
+              <td><strong>~152x Faster</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Live Event & Background Notification Audit Logs -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Live Background Notification & Event Audit Log</h2>
+        <div>
+          <button id="btn-refresh-logs" class="btn btn-sm">Refresh Logs</button>
+          <button id="btn-clear-logs" class="btn btn-sm btn-outline">Clear Logs</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Task / Details</th>
+              <th>Assigned User</th>
+              <th>API Responded At</th>
+              <th>Worker Completed At</th>
+              <th>Worker Lag / Duration</th>
+              <th>Execution Status</th>
+            </tr>
+          </thead>
+          <tbody id="event-logs-body">
+            <tr>
+              <td colspan="7" class="text-center">Loading event logs...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Current Tasks in MongoDB -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Active Tasks in Database (Trigger 'task-deleted' Background Event on Delete)</h2>
+      </div>
+      <div id="tasks-list" class="tasks-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Academic Footer -->
+    <footer class="academic-footer">
+      <p>Practical 10: Asynchronous Background Processing using Node.js Native EventEmitter | ITUE301 Advance Web Development Framework</p>
+      <p>Student: <strong>Daksh Karangiya</strong> | Roll Number: <strong>24CS038</strong> | Academic Year 2026-27</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "practical-10-eventemitter-background-processing",
+  "version": "1.0.0",
+  "description": "Practical 10: Asynchronous background processing using Node.js native EventEmitter without external dependencies - Student: Daksh Karangiya (24CS038)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "benchmark": "node benchmark-events.js",
+    "capture": "node capture-p10-screenshots.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.4",
+    "puppeteer-core": "^23.11.1"
+  }
+}
